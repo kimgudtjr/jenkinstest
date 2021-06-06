@@ -6,26 +6,18 @@ pipeline {
         node {
           label 'docker'
         }
+
       }
       steps {
         sh 'mvn -Dmaven.test.failure.ignore clean package'
-        stash(name: 'build-test-artifacts', \
-        includes: '**/target/surefire-reports/TEST-*.xml,target/*.jar')
+        stash(name: 'build-test-artifacts', includes: '**/target/surefire-reports/TEST-*.xml,target/*.jar')
       }
     }
+
     stage('Report & Publish') {
-      parallel {
-        stage('Report & Publish') {
-          agent {
-            node {
-              label 'docker'
-            }
-          }
-          steps {
-            unstash 'build-test-artifacts'
-            junit '**/target/surefire-reports/TEST-*.xml'
-            archiveArtifacts(onlyIfSuccessful: true, artifacts: 'target/*.jar')
-          }
+      agent {
+        node {
+          label 'docker'
         }
         stage('Publish to Artifactory') {
           agent {
@@ -49,11 +41,13 @@ pipeline {
 
               server.upload(uploadSpec)
             }
-
-          }
-        }
+      }
+      steps {
+        unstash 'build-test-artifacts'
+        junit '**/target/surefire-reports/TEST-*.xml'
+        archiveArtifacts(artifacts: 'target/*.jar', onlyIfSuccessful: true)
       }
     }
+
   }
 }
-
